@@ -1,0 +1,7 @@
+/target
+/result
+/*.dot
+/*.svg
+/*.png
+/*.webm
+/*.mp4

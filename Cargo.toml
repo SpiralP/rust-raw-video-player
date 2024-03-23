@@ -1,0 +1,20 @@
+[package]
+name = "raw-video-player"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+futures = "0.3"
+gstreamer = { version = "0.22", features = ["v1_22"] }
+gstreamer-app = { version = "0.22", features = ["v1_22"] }
+gstreamer-audio = { version = "0.22", features = ["v1_22"] }
+gstreamer-base = { version = "0.22", features = ["v1_22"] }
+gstreamer-play = { version = "0.22", features = ["v1_22"] }
+gstreamer-video = { version = "0.22", features = ["v1_22"] }
+thiserror = "1"
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+url = "2"
