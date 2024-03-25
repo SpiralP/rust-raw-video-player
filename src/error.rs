@@ -18,6 +18,9 @@ pub enum Error {
     #[error("PlayMessage::Error: {0}")]
     PlayMessage(#[source] gstreamer::glib::Error),
 
+    #[error("PlayMessage::parse(): {0}: {:?}", gstreamer::MessageRef::type_(.1))]
+    PlayMessageParse(#[source] gstreamer::glib::BoolError, gstreamer::Message),
+
     #[error("Element::set_state(): {0}")]
     StateChange(#[from] gstreamer::StateChangeError),
 
@@ -93,4 +96,22 @@ fn test_error_pipeline_state() {
     );
 
     pipeline.set_state(State::Null).unwrap();
+}
+
+#[test]
+fn test_error_play_message_parse() {
+    use gstreamer::message::Eos;
+    use gstreamer_play::PlayMessage;
+
+    gstreamer::init().expect("gstreamer::init");
+
+    let message = Eos::new();
+    let e: Error = PlayMessage::parse(&message)
+        .map_err(|error| Error::PlayMessageParse(error, message))
+        .expect_err("didn't error?");
+
+    assert_eq!(
+        format!("{}", e),
+        "PlayMessage::parse(): Invalid play message: Eos"
+    );
 }

@@ -64,10 +64,6 @@ impl GStreamerPlayer {
         Ok(())
     }
 
-    pub fn seek(&mut self, seconds: u64) {
-        self.play.seek(ClockTime::from_seconds(seconds));
-    }
-
     pub fn on_frame<CALLBACK>(&self, on_frame: CALLBACK)
     where
         CALLBACK: Fn(&[u8], u16, u16) + Sync + Send + 'static,
@@ -146,32 +142,40 @@ impl GStreamerPlayer {
         Ok(())
     }
 
+    pub fn seek(&mut self, seconds: u64) {
+        self.play.seek(ClockTime::from_seconds(seconds));
+    }
+
     pub async fn message_loop(&self) -> Result<()> {
-        let mut result: Result<()> = Ok(());
         let mut stream = self.play.message_bus().stream();
-        while let Some(msg) = stream.next().await {
-            let msg = PlayMessage::parse(&msg).expect("PlayMessage::parse()");
-            match msg {
-                PlayMessage::EndOfStream => {
-                    debug!("EndOfStream");
-                    break;
-                }
-                PlayMessage::Error { error, details: _ } => {
-                    result = Err(Error::PlayMessage(error));
-                    break;
-                }
-                PlayMessage::Buffering { percent } => {
-                    warn!(?percent, "Buffering");
-                }
-                PlayMessage::StateChanged { state } => {
-                    info!(?state, "StateChanged");
-                    if state == PlayState::Stopped {
+        let result = async move {
+            while let Some(msg) = stream.next().await {
+                let msg = PlayMessage::parse(&msg)
+                    .map_err(|error| Error::PlayMessageParse(error, msg))?;
+                match msg {
+                    PlayMessage::EndOfStream => {
+                        debug!("EndOfStream");
                         break;
                     }
+                    PlayMessage::Error { error, details: _ } => {
+                        return Err(Error::PlayMessage(error));
+                    }
+                    PlayMessage::Buffering { percent } => {
+                        warn!(?percent, "Buffering");
+                    }
+                    PlayMessage::StateChanged { state } => {
+                        info!(?state, "StateChanged");
+                        if state == PlayState::Stopped {
+                            break;
+                        }
+                    }
+                    _ => (),
                 }
-                _ => (),
             }
+
+            Ok(())
         }
+        .await;
 
         self.play.stop();
 
